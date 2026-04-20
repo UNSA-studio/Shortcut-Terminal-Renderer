@@ -1,0 +1,6 @@
+{
+    "strenderer.info.loading": "Shortcut Terminal Renderer is loading...",
+    "strenderer.info.ready": "STRenderer API is ready",
+    "strenderer.error.model_not_found": "Model not found: %s",
+    "strenderer.error.render_failed": "Failed to render model: %s"
+}

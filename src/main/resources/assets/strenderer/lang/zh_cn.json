@@ -1,0 +1,6 @@
+{
+    "strenderer.info.loading": "快捷终端渲染器正在加载...",
+    "strenderer.info.ready": "STRenderer API 已就绪",
+    "strenderer.error.model_not_found": "找不到模型: %s",
+    "strenderer.error.render_failed": "模型渲染失败: %s"
+}
