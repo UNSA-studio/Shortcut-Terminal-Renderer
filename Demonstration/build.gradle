@@ -31,11 +31,10 @@ neoForge {
 repositories {
     mavenCentral()
     flatDir {
-        dirs '../build/libs' // 用于依赖主模组的 JAR
+        dirs 'repo'
     }
 }
 
 dependencies {
-    // 依赖主模组（编译时从 flatDir 获取，运行时由 NeoForge 加载）
     implementation 'unsa.str.com.strenderer:strenderer:1.0.0'
 }

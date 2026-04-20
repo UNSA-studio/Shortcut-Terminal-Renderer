@@ -34,16 +34,14 @@ jobs:
       - name: Build main mod (STRenderer)
         run: ./gradlew build
 
-      - name: Publish main mod to local flatDir repo
+      - name: Prepare local repository for demonstration mod
         run: |
-          mkdir -p repo
-          cp build/libs/*.jar repo/
+          mkdir -p Demonstration/repo
+          cp build/libs/*.jar Demonstration/repo/
 
       - name: Build demonstration mod
-        run: |
-          cd Demonstration
-          chmod +x ../gradlew
-          ../gradlew build
+        working-directory: Demonstration
+        run: gradle build
 
       - name: Upload main mod artifact
         uses: actions/upload-artifact@v4
