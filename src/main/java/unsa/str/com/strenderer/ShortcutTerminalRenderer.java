@@ -17,7 +17,7 @@ public class ShortcutTerminalRenderer {
 
     public ShortcutTerminalRenderer(IEventBus modEventBus, ModContainer modContainer) {
         LOGGER.info("Shortcut Terminal Renderer is initializing...");
-        STRendererAPI.setInstance(new com.yourname.strenderer.api.STRendererAPIImpl());
+        STRendererAPI.setInstance(new unsa.str.com.strenderer.api.STRendererAPIImpl());
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::clientSetup);
         NeoForge.EVENT_BUS.register(this);

@@ -11,6 +11,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.server.packs.resources.ResourceManager;
 import org.joml.Matrix4f;
 import org.slf4j.Logger;
 import javax.annotation.Nullable;
@@ -30,7 +31,9 @@ public class GLTFModelLoader {
             ResourceLocation loc = ResourceLocation.parse(modelPath);
             Resource res = manager.getResource(loc).orElseThrow(() -> new RuntimeException("Not found: " + modelPath));
             try (InputStream is = res.open()) {
-                GltfModel model = new GltfModelReader().read(is);
+                // GltfModelReader.read() 需要 URI，我们改用 readWithoutReferences(InputStream)
+                GltfModelReader reader = new GltfModelReader();
+                GltfModel model = reader.readWithoutReferences(is);
                 MODEL_CACHE.put(modelPath, model);
                 LOGGER.debug("Loaded GLTF: {}", modelPath);
                 return model;
