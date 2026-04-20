@@ -1,0 +1,34 @@
+modLoader = "javafml"
+loaderVersion = "[2,)"
+license = "MIT"
+
+[[mods]]
+modId = "demo"
+version = "1.0.0"
+displayName = "Demonstration Mod"
+authors = "UNSA-studio"
+description = '''
+A demonstration mod for Shortcut Terminal Renderer API.
+Renders a custom GLTF model (terminal.gltf) on a custom item.
+'''
+
+[[dependencies.demo]]
+    modId = "neoforge"
+    type = "required"
+    versionRange = "[21.1.219,)"
+    ordering = "NONE"
+    side = "BOTH"
+
+[[dependencies.demo]]
+    modId = "minecraft"
+    type = "required"
+    versionRange = "[1.21.1,1.22)"
+    ordering = "NONE"
+    side = "BOTH"
+
+[[dependencies.demo]]
+    modId = "strenderer"
+    type = "required"
+    versionRange = "[1.0.0,)"
+    ordering = "AFTER"
+    side = "BOTH"

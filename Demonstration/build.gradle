@@ -1,0 +1,41 @@
+plugins {
+    id 'java'
+    id 'net.neoforged.moddev' version '2.0.78'
+}
+
+group = 'com.example.demo'
+version = '1.0.0'
+base.archivesName = 'demo'
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+neoForge {
+    version = "21.1.219"
+
+    runs {
+        client {
+            client()
+        }
+        server {
+            server()
+        }
+    }
+
+    mods {
+        demo {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+    flatDir {
+        dirs '../build/libs' // 用于依赖主模组的 JAR
+    }
+}
+
+dependencies {
+    // 依赖主模组（编译时从 flatDir 获取，运行时由 NeoForge 加载）
+    implementation 'unsa.str.com.strenderer:strenderer:1.0.0'
+}
