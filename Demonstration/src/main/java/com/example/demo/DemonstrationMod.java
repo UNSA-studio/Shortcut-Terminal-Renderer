@@ -2,6 +2,7 @@ package com.example.demo;
 
 import com.example.demo.client.TerminalBEWLR;
 import com.mojang.logging.LogUtils;
+import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -15,11 +16,8 @@ import unsa.str.com.strenderer.api.STRendererAPI;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
-
-import java.util.function.Consumer;
 
 @Mod(DemonstrationMod.MODID)
 public class DemonstrationMod {
