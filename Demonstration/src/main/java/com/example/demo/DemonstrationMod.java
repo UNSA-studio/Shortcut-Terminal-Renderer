@@ -6,13 +6,11 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import org.slf4j.Logger;
 import unsa.str.com.strenderer.api.STRendererAPI;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -29,7 +27,6 @@ public class DemonstrationMod {
         ITEMS.register(modEventBus);
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::clientSetup);
-        NeoForge.EVENT_BUS.register(this);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -39,22 +36,16 @@ public class DemonstrationMod {
     private void clientSetup(final FMLClientSetupEvent event) {
         LOGGER.info("Demonstration Mod client setup. Registering model...");
 
-        // 注册 GLTF 模型
         STRendererAPI.getInstance().registerGLTFModel(
                 ResourceLocation.fromNamespaceAndPath(MODID, "models/terminal.gltf"),
                 MODID + ":models/terminal.gltf"
         );
 
-        // 绑定到自定义物品
         STRendererAPI.getInstance().bindItemToModel(
                 ResourceLocation.fromNamespaceAndPath(MODID, "custom_item"),
                 ResourceLocation.fromNamespaceAndPath(MODID, "models/terminal.gltf")
         );
 
         LOGGER.info("Model bound to custom_item successfully.");
-    }
-
-    private void onServerStarting(final ServerStartingEvent event) {
-        LOGGER.info("Demonstration Mod server starting.");
     }
 }
