@@ -1,19 +1,25 @@
 package com.example.demo;
 
+import com.example.demo.client.TerminalBEWLR;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
+import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import org.slf4j.Logger;
 import unsa.str.com.strenderer.api.STRendererAPI;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
+
+import java.util.function.Consumer;
 
 @Mod(DemonstrationMod.MODID)
 public class DemonstrationMod {
@@ -22,13 +28,14 @@ public class DemonstrationMod {
 
     private static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MODID);
     public static final DeferredItem<Item> CUSTOM_ITEM = ITEMS.register("custom_item",
-            () -> new Item(new Item.Properties()));
+            () -> new CustomTerminalItem(new Item.Properties()));
 
     public DemonstrationMod(IEventBus modEventBus, ModContainer modContainer) {
         ITEMS.register(modEventBus);
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::clientSetup);
         modEventBus.addListener(this::addCreativeTab);
+        modEventBus.addListener(this::registerClientExtensions);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -54,6 +61,21 @@ public class DemonstrationMod {
     private void addCreativeTab(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
             event.accept(CUSTOM_ITEM);
+        }
+    }
+
+    private void registerClientExtensions(RegisterClientExtensionsEvent event) {
+        event.registerItem(new IClientItemExtensions() {
+            @Override
+            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                return TerminalBEWLR.INSTANCE;
+            }
+        }, CUSTOM_ITEM.get());
+    }
+
+    public static class CustomTerminalItem extends Item {
+        public CustomTerminalItem(Properties properties) {
+            super(properties);
         }
     }
 }
