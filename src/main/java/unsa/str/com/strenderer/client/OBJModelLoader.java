@@ -1,4 +1,3 @@
-import net.minecraft.client.Minecraft;
 package unsa.str.com.strenderer.client;
 
 import com.mojang.logging.LogUtils;
