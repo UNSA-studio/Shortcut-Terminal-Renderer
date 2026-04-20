@@ -46,7 +46,7 @@ configurations {
 
 dependencies {
     implementation 'com.github.javagl:JglTF:v2.0.0'
-    jarJar(group: 'com.github.javagl', artifact: 'JglTF', version: 'v2.0.0')
+    jarJar('com.github.javagl:JglTF:v2.0.0')
 }
 
 tasks.withType(ProcessResources).configureEach {
