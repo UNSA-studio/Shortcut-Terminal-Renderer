@@ -1,10 +1,10 @@
-package com.yourname.strenderer.renderer;
+package unsa.str.com.strenderer.renderer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.logging.LogUtils;
-import com.yourname.strenderer.api.STRendererAPI;
-import com.yourname.strenderer.client.GLTFModelLoader;
-import com.yourname.strenderer.client.OBJModelLoader;
+import unsa.str.com.strenderer.api.STRendererAPI;
+import unsa.str.com.strenderer.client.GLTFModelLoader;
+import unsa.str.com.strenderer.client.OBJModelLoader;
 import de.javagl.jgltf.model.GltfModel;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;

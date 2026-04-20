@@ -1,6 +1,6 @@
-package com.yourname.strenderer.renderer;
+package unsa.str.com.strenderer.renderer;
 
-import com.yourname.strenderer.ShortcutTerminalRenderer;
+import unsa.str.com.strenderer.ShortcutTerminalRenderer;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;

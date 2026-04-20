@@ -1,9 +1,9 @@
-package com.yourname.strenderer.client;
+package unsa.str.com.strenderer.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.logging.LogUtils;
-import com.yourname.strenderer.ShortcutTerminalRenderer;
+import unsa.str.com.strenderer.ShortcutTerminalRenderer;
 import de.javagl.jgltf.model.GltfModel;
 import de.javagl.jgltf.model.io.GltfModelReader;
 import net.minecraft.client.Minecraft;

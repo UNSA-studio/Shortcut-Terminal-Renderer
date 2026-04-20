@@ -1,7 +1,7 @@
-package com.yourname.strenderer;
+package unsa.str.com.strenderer;
 
 import com.mojang.logging.LogUtils;
-import com.yourname.strenderer.api.STRendererAPI;
+import unsa.str.com.strenderer.api.STRendererAPI;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;

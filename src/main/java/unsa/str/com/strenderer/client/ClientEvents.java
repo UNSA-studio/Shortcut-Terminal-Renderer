@@ -1,6 +1,7 @@
-package com.yourname.strenderer.client;
+import net.minecraft.client.Minecraft;
+package unsa.str.com.strenderer.client;
 
-import com.yourname.strenderer.ShortcutTerminalRenderer;
+import unsa.str.com.strenderer.ShortcutTerminalRenderer;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -26,3 +27,4 @@ public class ClientEvents {
     @SubscribeEvent
     public static void onRenderLevelStage(RenderLevelStageEvent event) {}
 }
+// 修复缺少的 import

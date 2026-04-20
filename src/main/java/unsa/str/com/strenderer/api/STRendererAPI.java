@@ -1,6 +1,6 @@
-package com.yourname.strenderer.api;
+package unsa.str.com.strenderer.api;
 
-import com.yourname.strenderer.ShortcutTerminalRenderer;
+import unsa.str.com.strenderer.ShortcutTerminalRenderer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import javax.annotation.Nullable;
