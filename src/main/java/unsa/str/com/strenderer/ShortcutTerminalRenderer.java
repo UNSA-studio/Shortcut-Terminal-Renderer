@@ -7,7 +7,6 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.neoforged.neoforge.common.NeoForge;
 import org.slf4j.Logger;
 
 @Mod(ShortcutTerminalRenderer.MODID)
@@ -20,7 +19,6 @@ public class ShortcutTerminalRenderer {
         STRendererAPI.setInstance(new unsa.str.com.strenderer.api.STRendererAPIImpl());
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::clientSetup);
-        NeoForge.EVENT_BUS.register(this);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
