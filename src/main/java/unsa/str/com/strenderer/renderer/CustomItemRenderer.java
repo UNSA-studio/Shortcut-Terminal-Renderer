@@ -8,7 +8,6 @@ import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.client.model.geometry.StandaloneGeometryBakingContext;
 import org.slf4j.Logger;
 import unsa.str.com.strenderer.api.STRendererAPI;
 import unsa.str.com.strenderer.client.GltfModelLoader;
@@ -31,7 +30,7 @@ public class CustomItemRenderer {
             BakedModel model = null;
             if (data.getType() == STRendererAPI.ModelType.GLTF) {
                 ResourceLocation modelLocation = ResourceLocation.parse(data.getModelPath());
-                model = GltfModelLoader.load(modelLocation, StandaloneGeometryBakingContext.INSTANCE);
+                model = GltfModelLoader.loadModel(modelLocation);
             } else if (data.getType() == STRendererAPI.ModelType.OBJ) {
                 model = OBJModelLoader.loadModel(data.getModelPath());
             }

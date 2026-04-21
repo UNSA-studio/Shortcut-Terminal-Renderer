@@ -49,15 +49,16 @@ configurations {
 }
 
 dependencies {
-    // JGLTF 核心模块 (版本 2.0.0 在 Maven Central 上稳定可用)
-    implementation 'de.javagl:jgltf-model:2.0.0'
-    implementation 'de.javagl:jgltf-impl-v1:2.0.0'
-    implementation 'de.javagl:jgltf-impl-v2:2.0.0'
+    // 升级到 2.0.4 版本，API 更完整
+    implementation 'de.javagl:jgltf-model:2.0.4'
+    implementation 'de.javagl:jgltf-io:2.0.4'
+    implementation 'de.javagl:jgltf-impl-v1:2.0.4'
+    implementation 'de.javagl:jgltf-impl-v2:2.0.4'
     
-    // 将 JGLTF 打包进最终 JAR
-    jarJar('de.javagl:jgltf-model:2.0.0')
-    jarJar('de.javagl:jgltf-impl-v1:2.0.0')
-    jarJar('de.javagl:jgltf-impl-v2:2.0.0')
+    jarJar('de.javagl:jgltf-model:2.0.4')
+    jarJar('de.javagl:jgltf-io:2.0.4')
+    jarJar('de.javagl:jgltf-impl-v1:2.0.4')
+    jarJar('de.javagl:jgltf-impl-v2:2.0.4')
 }
 
 tasks.withType(ProcessResources).configureEach {
