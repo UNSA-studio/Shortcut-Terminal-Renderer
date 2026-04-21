@@ -43,13 +43,28 @@ jobs:
         working-directory: Demonstration
         run: gradle build
 
-      - name: Upload main mod artifact
+      - name: Create combined ZIP archive
+        run: |
+          mkdir -p artifacts
+          cp build/libs/strenderer-*.jar artifacts/
+          cp Demonstration/build/libs/demo-*.jar artifacts/
+          cd artifacts
+          zip -r ../ShortcutTerminalRenderer-Bundle.zip .
+          cd ..
+
+      - name: Upload combined ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: strenderer-bundle
+          path: ShortcutTerminalRenderer-Bundle.zip
+
+      - name: Upload main mod artifact (separate)
         uses: actions/upload-artifact@v4
         with:
           name: strenderer-main
           path: build/libs/*.jar
 
-      - name: Upload demonstration mod artifact
+      - name: Upload demonstration mod artifact (separate)
         uses: actions/upload-artifact@v4
         with:
           name: strenderer-demo
