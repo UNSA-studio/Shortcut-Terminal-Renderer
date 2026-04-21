@@ -6,9 +6,9 @@ import com.mojang.logging.LogUtils;
 import de.javagl.jgltf.model.*;
 import de.javagl.jgltf.model.io.GltfModelReader;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -51,8 +51,11 @@ public class GLTFModelLoader {
     public static void renderModel(GltfModel model, PoseStack poseStack, MultiBufferSource buffer, int light, int overlay) {
         if (model == null) return;
         Matrix4f matrix = poseStack.last().pose();
-        for (MeshModel mesh : model.getMeshModels()) {
-            for (MeshPrimitiveModel primitive : mesh.getMeshPrimitiveModels()) {
+        // 获取模型的所有网格
+        List<MeshModel> meshes = model.getMeshes();
+        for (MeshModel mesh : meshes) {
+            List<MeshPrimitiveModel> primitives = mesh.getMeshPrimitives();
+            for (MeshPrimitiveModel primitive : primitives) {
                 renderPrimitive(primitive, matrix, buffer, light, overlay);
             }
         }
@@ -61,79 +64,82 @@ public class GLTFModelLoader {
     private static void renderPrimitive(MeshPrimitiveModel primitive, Matrix4f matrix, MultiBufferSource buffer, int light, int overlay) {
         Map<String, AccessorModel> attributes = primitive.getAttributes();
         AccessorModel positionAccessor = attributes.get("POSITION");
-        AccessorModel normalAccessor = attributes.get("NORMAL");
-        AccessorModel texCoordAccessor = attributes.get("TEXCOORD_0");
-
         if (positionAccessor == null) return;
 
-        FloatBuffer positions = positionAccessor.getBufferFloat();
-        FloatBuffer normals = normalAccessor != null ? normalAccessor.getBufferFloat() : null;
-        FloatBuffer texCoords = texCoordAccessor != null ? texCoordAccessor.getBufferFloat() : null;
-
+        // 获取索引数据
         AccessorModel indicesAccessor = primitive.getIndices();
-        ByteBuffer indicesByte = indicesAccessor != null ? indicesAccessor.getBufferByte() : null;
-        int count = indicesByte != null ? indicesAccessor.getCount() : positionAccessor.getCount();
+        int vertexCount = indicesAccessor != null ? indicesAccessor.getCount() : positionAccessor.getCount();
 
-        // 尝试获取材质，若无则使用纯白色
-        MaterialModel material = primitive.getMaterialModel();
-        ResourceLocation textureLocation = null;
-        if (material != null) {
-            TextureModel baseColorTexture = material.getBaseColorTexture();
-            if (baseColorTexture != null) {
-                ImageModel image = baseColorTexture.getImageModel();
-                if (image != null) {
-                    String uri = image.getUri();
-                    if (uri != null && !uri.isEmpty()) {
-                        textureLocation = ResourceLocation.parse(uri);
-                    }
+        // 获取属性缓冲区
+        FloatBuffer positions = getFloatBuffer(positionAccessor);
+        FloatBuffer normals = attributes.containsKey("NORMAL") ? getFloatBuffer(attributes.get("NORMAL")) : null;
+        FloatBuffer texCoords = attributes.containsKey("TEXCOORD_0") ? getFloatBuffer(attributes.get("TEXCOORD_0")) : null;
+
+        // 索引缓冲区
+        ByteBuffer indexBuffer = indicesAccessor != null ? indicesAccessor.getBuffer() : null;
+        int indexComponentType = indicesAccessor != null ? indicesAccessor.getComponentType() : 0;
+
+        // 使用纯白色渲染类型（因为没有正确解析纹理，先用固定颜色，确保可见）
+        VertexConsumer consumer = buffer.getBuffer(RenderType.lines());
+
+        // 如果无索引，按顺序渲染顶点（每个三角形三个顶点）
+        if (indexBuffer == null) {
+            for (int i = 0; i < vertexCount; i += 3) {
+                for (int j = 0; j < 3; j++) {
+                    int idx = i + j;
+                    float x = positions.get(idx * 3);
+                    float y = positions.get(idx * 3 + 1);
+                    float z = positions.get(idx * 3 + 2);
+                    float nx = normals != null ? normals.get(idx * 3) : 0;
+                    float ny = normals != null ? normals.get(idx * 3 + 1) : 0;
+                    float nz = normals != null ? normals.get(idx * 3 + 2) : 1;
+                    float u = texCoords != null ? texCoords.get(idx * 2) : 0;
+                    float v = texCoords != null ? texCoords.get(idx * 2 + 1) : 0;
+
+                    consumer.addVertex(matrix, x, y, z)
+                            .setColor(255, 255, 255, 255)
+                            .setUv(u, v)
+                            .setUv2(LightTexture.FULL_BRIGHT)
+                            .setNormal(nx, ny, nz);
                 }
             }
-        }
-
-        VertexConsumer consumer;
-        if (textureLocation != null) {
-            consumer = buffer.getBuffer(RenderType.entityCutoutNoCull(textureLocation));
         } else {
-            consumer = buffer.getBuffer(RenderType.entityCutoutNoCull(
-                    ResourceLocation.fromNamespaceAndPath(ShortcutTerminalRenderer.MODID, "textures/misc/white.png")));
-        }
+            // 有索引缓冲区的情况
+            for (int i = 0; i < vertexCount; i++) {
+                int index = readIndex(indexBuffer, indexComponentType, i);
+                float x = positions.get(index * 3);
+                float y = positions.get(index * 3 + 1);
+                float z = positions.get(index * 3 + 2);
+                float nx = normals != null ? normals.get(index * 3) : 0;
+                float ny = normals != null ? normals.get(index * 3 + 1) : 0;
+                float nz = normals != null ? normals.get(index * 3 + 2) : 1;
+                float u = texCoords != null ? texCoords.get(index * 2) : 0;
+                float v = texCoords != null ? texCoords.get(index * 2 + 1) : 0;
 
-        for (int i = 0; i < count; i++) {
-            int index;
-            if (indicesByte != null) {
-                switch (indicesAccessor.getComponentType()) {
-                    case GL_UNSIGNED_BYTE:
-                        index = indicesByte.get(i) & 0xFF;
-                        break;
-                    case GL_UNSIGNED_SHORT:
-                        index = indicesByte.getShort(i * 2) & 0xFFFF;
-                        break;
-                    case GL_UNSIGNED_INT:
-                        index = indicesByte.getInt(i * 4);
-                        break;
-                    default:
-                        continue;
-                }
-            } else {
-                index = i;
+                consumer.addVertex(matrix, x, y, z)
+                        .setColor(255, 255, 255, 255)
+                        .setUv(u, v)
+                        .setUv2(LightTexture.FULL_BRIGHT)
+                        .setNormal(nx, ny, nz);
             }
+        }
+    }
 
-            float x = positions.get(index * 3);
-            float y = positions.get(index * 3 + 1);
-            float z = positions.get(index * 3 + 2);
+    private static FloatBuffer getFloatBuffer(AccessorModel accessor) {
+        ByteBuffer buffer = accessor.getBuffer();
+        return buffer.asFloatBuffer();
+    }
 
-            float nx = normals != null ? normals.get(index * 3) : 0;
-            float ny = normals != null ? normals.get(index * 3 + 1) : 0;
-            float nz = normals != null ? normals.get(index * 3 + 2) : 1;
-
-            float u = texCoords != null ? texCoords.get(index * 2) : 0;
-            float v = texCoords != null ? texCoords.get(index * 2 + 1) : 0;
-
-            consumer.addVertex(matrix, x, y, z)
-                    .setColor(-1)
-                    .setUv(u, v)
-                    .setUv2(light)
-                    .setNormal(nx, ny, nz);
+    private static int readIndex(ByteBuffer buffer, int componentType, int offset) {
+        switch (componentType) {
+            case 5121: // GL_UNSIGNED_BYTE
+                return buffer.get(offset) & 0xFF;
+            case 5123: // GL_UNSIGNED_SHORT
+                return buffer.getShort(offset * 2) & 0xFFFF;
+            case 5125: // GL_UNSIGNED_INT
+                return buffer.getInt(offset * 4);
+            default:
+                return 0;
         }
     }
 

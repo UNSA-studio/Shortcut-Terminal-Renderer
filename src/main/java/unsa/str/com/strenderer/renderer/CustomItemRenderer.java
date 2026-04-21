@@ -60,9 +60,6 @@ public class CustomItemRenderer {
             case GROUND:
                 poseStack.scale(0.5f, 0.5f, 0.5f);
                 break;
-            case FIXED:
-                poseStack.scale(1.0f, 1.0f, 1.0f);
-                break;
             case THIRD_PERSON_RIGHT_HAND:
             case THIRD_PERSON_LEFT_HAND:
                 poseStack.scale(0.6f, 0.6f, 0.6f);
