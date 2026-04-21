@@ -51,41 +51,56 @@ public class GLTFModelLoader {
     public static void renderModel(GltfModel model, PoseStack poseStack, MultiBufferSource buffer, int light, int overlay) {
         if (model == null) return;
         Matrix4f matrix = poseStack.last().pose();
-        // 获取网格模型
-        List<MeshModel> meshes = model.getMeshModels();
+        // 遍历所有网格
+        List<MeshModel> meshes = model.getMeshes();
+        if (meshes == null) return;
         for (MeshModel mesh : meshes) {
-            List<MeshPrimitiveModel> primitives = mesh.getMeshPrimitiveModels();
+            List<MeshPrimitiveModel> primitives = mesh.getMeshPrimitives();
+            if (primitives == null) continue;
             for (MeshPrimitiveModel primitive : primitives) {
                 renderPrimitive(primitive, matrix, buffer, light, overlay);
             }
         }
     }
 
-    private static void renderPrimitive(MeshPrimitiveModel primitive, Matrix4f matrix, MultiBufferSource buffer, int light, int overlay) {
+    private static void renderPrimitive(MeshPrimitiveModel primitive, Matrix4f matrix,
+                                        MultiBufferSource buffer, int light, int overlay) {
         Map<String, AccessorModel> attributes = primitive.getAttributes();
         AccessorModel positionAccessor = attributes.get("POSITION");
         if (positionAccessor == null) return;
 
-        // 获取索引数据
+        // 获取索引访问器
         AccessorModel indicesAccessor = primitive.getIndices();
         int vertexCount = indicesAccessor != null ? indicesAccessor.getCount() : positionAccessor.getCount();
 
-        // 获取属性缓冲区
-        FloatBuffer positions = positionAccessor.getBufferFloat();
-        FloatBuffer normals = attributes.containsKey("NORMAL") ? attributes.get("NORMAL").getBufferFloat() : null;
-        FloatBuffer texCoords = attributes.containsKey("TEXCOORD_0") ? attributes.get("TEXCOORD_0").getBufferFloat() : null;
+        // 获取数据缓冲区
+        ByteBuffer posBuffer = positionAccessor.getBuffer();
+        FloatBuffer positions = posBuffer != null ? posBuffer.asFloatBuffer() : null;
+        if (positions == null) return;
 
-        // 索引缓冲区
-        ByteBuffer indexBuffer = indicesAccessor != null ? indicesAccessor.getBufferByte() : null;
+        AccessorModel normalAccessor = attributes.get("NORMAL");
+        FloatBuffer normals = null;
+        if (normalAccessor != null) {
+            ByteBuffer normBuffer = normalAccessor.getBuffer();
+            normals = normBuffer != null ? normBuffer.asFloatBuffer() : null;
+        }
+
+        AccessorModel texCoordAccessor = attributes.get("TEXCOORD_0");
+        FloatBuffer texCoords = null;
+        if (texCoordAccessor != null) {
+            ByteBuffer texBuffer = texCoordAccessor.getBuffer();
+            texCoords = texBuffer != null ? texBuffer.asFloatBuffer() : null;
+        }
+
+        ByteBuffer indexBuffer = indicesAccessor != null ? indicesAccessor.getBuffer() : null;
         int indexComponentType = indicesAccessor != null ? indicesAccessor.getComponentType() : 0;
 
-        // 使用线框模式确保可见 (后续可改为实体渲染)
+        // 使用线框模式确保可见（后续可改为实体渲染）
         VertexConsumer consumer = buffer.getBuffer(RenderType.lines());
-
         int packedLight = LightTexture.pack(light, overlay);
 
         if (indexBuffer == null) {
-            // 无索引，按顺序渲染
+            // 无索引，按顺序渲染三角形（假设为三角形列表）
             for (int i = 0; i < vertexCount; i += 3) {
                 for (int j = 0; j < 3; j++) {
                     int idx = i + j;
@@ -129,11 +144,11 @@ public class GLTFModelLoader {
 
     private static int readIndex(ByteBuffer buffer, int componentType, int offset) {
         switch (componentType) {
-            case AccessorModel.ComponentType.GL_UNSIGNED_BYTE:
+            case AccessorModel.GL_UNSIGNED_BYTE:
                 return buffer.get(offset) & 0xFF;
-            case AccessorModel.ComponentType.GL_UNSIGNED_SHORT:
+            case AccessorModel.GL_UNSIGNED_SHORT:
                 return buffer.getShort(offset * 2) & 0xFFFF;
-            case AccessorModel.ComponentType.GL_UNSIGNED_INT:
+            case AccessorModel.GL_UNSIGNED_INT:
                 return buffer.getInt(offset * 4);
             default:
                 return 0;
