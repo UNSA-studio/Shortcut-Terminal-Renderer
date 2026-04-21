@@ -49,14 +49,11 @@ configurations {
 }
 
 dependencies {
-    // 升级到 2.0.4 版本，API 更完整
     implementation 'de.javagl:jgltf-model:2.0.4'
-    implementation 'de.javagl:jgltf-io:2.0.4'
     implementation 'de.javagl:jgltf-impl-v1:2.0.4'
     implementation 'de.javagl:jgltf-impl-v2:2.0.4'
     
     jarJar('de.javagl:jgltf-model:2.0.4')
-    jarJar('de.javagl:jgltf-io:2.0.4')
     jarJar('de.javagl:jgltf-impl-v1:2.0.4')
     jarJar('de.javagl:jgltf-impl-v2:2.0.4')
 }
