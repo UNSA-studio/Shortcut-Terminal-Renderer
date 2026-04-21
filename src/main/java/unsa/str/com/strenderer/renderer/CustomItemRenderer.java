@@ -2,7 +2,6 @@ package unsa.str.com.strenderer.renderer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.logging.LogUtils;
-import de.javagl.jgltf.model.GltfModel;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.resources.model.BakedModel;
@@ -27,20 +26,41 @@ public class CustomItemRenderer {
         try {
             poseStack.pushPose();
             applyTransform(poseStack, context);
+            
+            // 根据模型类型决定缩放比例
+            float scale = 1.0f;
             if (data.getType() == STRendererAPI.ModelType.GLTF) {
-                GltfModel model = GLTFModelLoader.loadModel(data.getModelPath());
+                // glTF模型通常需要缩小（如果太大）或放大（如果太小）
+                scale = 0.5f; // 可根据实际模型大小调整
+            } else if (data.getType() == STRendererAPI.ModelType.OBJ) {
+                scale = 0.5f;
+            }
+            poseStack.scale(scale, scale, scale);
+            
+            BakedModel model = null;
+            if (data.getType() == STRendererAPI.ModelType.GLTF) {
+                model = GLTFModelLoader.loadModel(data.getModelPath());
                 if (model != null) {
-                    GLTFModelLoader.renderModel(model, poseStack, buffer, light, overlay);
+                    LOGGER.debug("GLTF model loaded successfully: {}", data.getModelPath());
                 } else {
-                    LOGGER.warn("GLTF model not loaded: {}", data.getModelPath());
+                    LOGGER.warn("GLTF model failed to load: {}", data.getModelPath());
                 }
             } else if (data.getType() == STRendererAPI.ModelType.OBJ) {
-                BakedModel model = OBJModelLoader.loadModel(data.getModelPath());
+                model = OBJModelLoader.loadModel(data.getModelPath());
                 if (model != null) {
-                    Minecraft.getInstance().getItemRenderer().renderModelLists(
-                            model, ItemStack.EMPTY, light, overlay, poseStack,
-                            buffer.getBuffer(net.minecraft.client.renderer.RenderType.solid()));
+                    LOGGER.debug("OBJ model loaded successfully: {}", data.getModelPath());
+                } else {
+                    LOGGER.warn("OBJ model failed to load: {}", data.getModelPath());
                 }
+            }
+
+            if (model != null) {
+                Minecraft.getInstance().getItemRenderer().renderModelLists(
+                        model, stack, light, overlay, poseStack,
+                        buffer.getBuffer(net.minecraft.client.renderer.RenderType.solid())
+                );
+            } else {
+                LOGGER.warn("Model not loaded for item {}: {}", itemId, data.getModelPath());
             }
             poseStack.popPose();
             return true;
@@ -54,21 +74,25 @@ public class CustomItemRenderer {
     private static void applyTransform(PoseStack poseStack, ItemDisplayContext context) {
         switch (context) {
             case GUI:
-                poseStack.scale(0.5f, 0.5f, 0.5f);
-                poseStack.translate(0, 0.5, 0);
+                poseStack.translate(0.5, 0.5, 0);
+                poseStack.scale(1.0f, 1.0f, 1.0f);
                 break;
             case GROUND:
+                poseStack.translate(0.5, 0, 0.5);
                 poseStack.scale(0.5f, 0.5f, 0.5f);
+                break;
+            case FIXED:
+                poseStack.scale(1.0f, 1.0f, 1.0f);
                 break;
             case THIRD_PERSON_RIGHT_HAND:
             case THIRD_PERSON_LEFT_HAND:
+                poseStack.translate(0.5, 0.5, 0.5);
                 poseStack.scale(0.6f, 0.6f, 0.6f);
-                poseStack.translate(0, 0.2, 0);
                 break;
             case FIRST_PERSON_RIGHT_HAND:
             case FIRST_PERSON_LEFT_HAND:
+                poseStack.translate(0.5, 0.5, 0.5);
                 poseStack.scale(0.5f, 0.5f, 0.5f);
-                poseStack.translate(0, 0.3, 0);
                 break;
             default:
                 break;
