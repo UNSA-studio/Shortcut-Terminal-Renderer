@@ -41,43 +41,45 @@ public class GltfModelLoader {
         try {
             ResourceManager manager = Minecraft.getInstance().getResourceManager();
             ResourceLocation loc = ResourceLocation.parse(modelPath);
-            Resource res = manager.getResource(loc).orElseThrow(() -> new RuntimeException("Not found: " + modelPath));
+            Resource res = manager.getResource(loc).orElseThrow(() -> new RuntimeException("Model not found: " + modelPath));
             try (InputStream is = res.open()) {
-                GltfAsset asset = new GltfModelReader().readWithoutReferences(is);
-                GltfModel model = asset.getModel();
-                BakedModel bakedModel = new GlTFBakedModel(model, loc);
+                GltfModelReader reader = new GltfModelReader();
+                // 使用正确的API：readWithoutReferences 返回 GltfModel
+                GltfModel model = reader.readWithoutReferences(is);
+                BakedModel bakedModel = new GlTFBakedModel(model);
                 MODEL_CACHE.put(modelPath, bakedModel);
-                LOGGER.debug("Loaded GLTF as BakedModel: {}", modelPath);
+                LOGGER.debug("Successfully loaded GLTF model: {}", modelPath);
                 return bakedModel;
             }
         } catch (Exception e) {
-            LOGGER.error("Failed to load GLTF: {}", modelPath, e);
+            LOGGER.error("Failed to load GLTF model: {}", modelPath, e);
             return null;
         }
     }
 
-    public static void clearCache() { MODEL_CACHE.clear(); }
+    public static void clearCache() {
+        MODEL_CACHE.clear();
+    }
 
     private static class GlTFBakedModel implements IDynamicBakedModel {
         private final List<BakedQuad> quads = new ArrayList<>();
-        private final ResourceLocation modelLocation;
 
-        public GlTFBakedModel(GltfModel model, ResourceLocation modelLocation) {
-            this.modelLocation = modelLocation;
-            LOGGER.debug("Building BakedModel for: {}", modelLocation);
-            for (SceneModel scene : model.getSceneModels()) {
-                for (NodeModel node : scene.getNodeModels()) {
-                    for (MeshModel mesh : node.getMeshModels()) {
-                        for (MeshPrimitiveModel primitive : mesh.getMeshPrimitives()) {
-                            if (primitive.getMode() != 4) continue;
-                            List<BakedQuad> primitiveQuads = createQuadsForPrimitive(primitive);
-                            quads.addAll(primitiveQuads);
-                            LOGGER.debug("Added {} quads from primitive", primitiveQuads.size());
-                        }
+        public GlTFBakedModel(GltfModel model) {
+            // 遍历所有节点
+            for (NodeModel node : model.getNodes()) {
+                MeshModel mesh = node.getMesh();
+                if (mesh == null) continue;
+                // 遍历网格的所有图元
+                for (MeshPrimitiveModel primitive : mesh.getMeshPrimitives()) {
+                    if (primitive.getMode() != 4) { // 4 代表 TRIANGLES
+                        LOGGER.warn("Skipping non-triangle primitive with mode: {}", primitive.getMode());
+                        continue;
                     }
+                    List<BakedQuad> primitiveQuads = createQuadsForPrimitive(primitive);
+                    quads.addAll(primitiveQuads);
                 }
             }
-            LOGGER.debug("Total quads for {}: {}", modelLocation, quads.size());
+            LOGGER.debug("Built {} quads for GLTF model", quads.size());
         }
 
         private List<BakedQuad> createQuadsForPrimitive(MeshPrimitiveModel primitive) {
@@ -87,19 +89,26 @@ public class GltfModelLoader {
             AccessorModel uvAccessor = attributes.get("TEXCOORD_0");
             if (posAccessor == null) return Collections.emptyList();
 
+            // 获取顶点数据缓冲区
             FloatBuffer positions = asFloatBuffer(posAccessor.getBuffer());
             FloatBuffer normals = normalAccessor != null ? asFloatBuffer(normalAccessor.getBuffer()) : null;
             FloatBuffer texCoords = uvAccessor != null ? asFloatBuffer(uvAccessor.getBuffer()) : null;
 
+            // 索引数据
             AccessorModel indicesAccessor = primitive.getIndices();
             int vertexCount = indicesAccessor != null ? indicesAccessor.getCount() : posAccessor.getCount();
             ByteBuffer indexBuffer = indicesAccessor != null ? indicesAccessor.getBuffer() : null;
             int indexComponentType = indicesAccessor != null ? indicesAccessor.getComponentType() : 0;
 
+            // 使用缺失纹理作为占位符，后续可扩展材质支持
             TextureAtlasSprite sprite = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
                     .apply(MissingTextureAtlasSprite.getLocation());
 
             List<BakedQuad> quadList = new ArrayList<>();
+            QuadBakingVertexConsumer baker = new QuadBakingVertexConsumer(q -> quadList.add(q));
+            baker.setSprite(sprite);
+            baker.setDirection(Direction.NORTH); // 物品模型方向无所谓
+
             for (int i = 0; i < vertexCount; i += 3) {
                 int[] indices = new int[3];
                 if (indexBuffer != null) {
@@ -109,10 +118,6 @@ public class GltfModelLoader {
                 } else {
                     indices[0] = i; indices[1] = i + 1; indices[2] = i + 2;
                 }
-
-                QuadBakingVertexConsumer baker = new QuadBakingVertexConsumer(q -> quadList.add(q));
-                baker.setSprite(sprite);
-                baker.setDirection(Direction.NORTH);
 
                 for (int j = 0; j < 3; j++) {
                     int idx = indices[j];
@@ -124,7 +129,7 @@ public class GltfModelLoader {
                     baker.vertex(pos.x, pos.y, pos.z)
                          .color(255, 255, 255, 255)
                          .uv(sprite.getU(u), sprite.getV(v))
-                         .uv2(0xF000F0)
+                         .uv2(0xF000F0) // 默认满光照
                          .normal(normal.x, normal.y, normal.z)
                          .endVertex();
                 }
@@ -138,10 +143,14 @@ public class GltfModelLoader {
 
         private int readIndex(ByteBuffer buffer, int componentType, int offset) {
             switch (componentType) {
-                case 5121: return buffer.get(offset) & 0xFF;
-                case 5123: return buffer.getShort(offset * 2) & 0xFFFF;
-                case 5125: return buffer.getInt(offset * 4);
-                default: return 0;
+                case 5121: // GL_UNSIGNED_BYTE
+                    return buffer.get(offset) & 0xFF;
+                case 5123: // GL_UNSIGNED_SHORT
+                    return buffer.getShort(offset * 2) & 0xFFFF;
+                case 5125: // GL_UNSIGNED_INT
+                    return buffer.getInt(offset * 4);
+                default:
+                    return 0;
             }
         }
 
