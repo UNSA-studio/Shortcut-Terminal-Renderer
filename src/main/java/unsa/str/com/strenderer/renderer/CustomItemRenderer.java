@@ -8,10 +8,11 @@ import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.client.model.geometry.StandaloneGeometryBakingContext;
 import org.slf4j.Logger;
 import unsa.str.com.strenderer.api.STRendererAPI;
+import unsa.str.com.strenderer.client.GltfModelLoader;
 import unsa.str.com.strenderer.client.OBJModelLoader;
-import unsa.str.com.strenderer.client.gltf.GltfModelLoader;
 
 public class CustomItemRenderer {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -29,28 +30,25 @@ public class CustomItemRenderer {
 
             BakedModel model = null;
             if (data.getType() == STRendererAPI.ModelType.GLTF) {
-                model = GltfModelLoader.loadModel(data.getModelPath());
-                if (model != null) {
-                    LOGGER.debug("GLTF model loaded for rendering: {}", data.getModelPath());
-                } else {
-                    LOGGER.warn("GLTF model could not be loaded: {}", data.getModelPath());
-                }
+                ResourceLocation modelLocation = ResourceLocation.parse(data.getModelPath());
+                model = GltfModelLoader.load(modelLocation, StandaloneGeometryBakingContext.INSTANCE);
             } else if (data.getType() == STRendererAPI.ModelType.OBJ) {
                 model = OBJModelLoader.loadModel(data.getModelPath());
             }
 
             if (model != null) {
-                // 应用适当的缩放
                 poseStack.scale(0.5f, 0.5f, 0.5f);
                 Minecraft.getInstance().getItemRenderer().renderModelLists(
                         model, stack, light, overlay, poseStack,
                         buffer.getBuffer(net.minecraft.client.renderer.RenderType.solid())
                 );
+            } else {
+                LOGGER.warn("Failed to load model for item {}", itemId);
             }
             poseStack.popPose();
             return true;
         } catch (Exception e) {
-            LOGGER.error("Render failed for item {}", itemId, e);
+            LOGGER.error("Render failed for {}", itemId, e);
             poseStack.popPose();
             return false;
         }
