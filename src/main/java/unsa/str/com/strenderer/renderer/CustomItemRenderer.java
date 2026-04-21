@@ -10,8 +10,8 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 import unsa.str.com.strenderer.api.STRendererAPI;
-import unsa.str.com.strenderer.client.GltfModelLoader;
 import unsa.str.com.strenderer.client.OBJModelLoader;
+import unsa.str.com.strenderer.client.gltf.GltfModelLoader;
 
 public class CustomItemRenderer {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -26,30 +26,34 @@ public class CustomItemRenderer {
         try {
             poseStack.pushPose();
             applyTransform(poseStack, context);
-
+            
+            float scale = 1.0f;
             BakedModel model = null;
+            
             if (data.getType() == STRendererAPI.ModelType.GLTF) {
-                ResourceLocation modelLocation = ResourceLocation.parse(data.getModelPath());
-                model = GltfModelLoader.loadModel(modelLocation);
+                model = GltfModelLoader.loadModel(data.getModelPath());
+                scale = 0.5f;
             } else if (data.getType() == STRendererAPI.ModelType.OBJ) {
                 model = OBJModelLoader.loadModel(data.getModelPath());
+                scale = 0.5f;
             }
-
+            poseStack.scale(scale, scale, scale);
+            
             if (model != null) {
-                poseStack.scale(0.5f, 0.5f, 0.5f);
                 Minecraft.getInstance().getItemRenderer().renderModelLists(
                         model, stack, light, overlay, poseStack,
                         buffer.getBuffer(net.minecraft.client.renderer.RenderType.solid())
                 );
+                return true;
             } else {
-                LOGGER.warn("Failed to load model for item {}", itemId);
+                LOGGER.warn("Model not loaded for item {}: {}", itemId, data.getModelPath());
+                return false;
             }
-            poseStack.popPose();
-            return true;
         } catch (Exception e) {
             LOGGER.error("Render failed for {}", itemId, e);
-            poseStack.popPose();
             return false;
+        } finally {
+            poseStack.popPose();
         }
     }
 
@@ -57,17 +61,24 @@ public class CustomItemRenderer {
         switch (context) {
             case GUI:
                 poseStack.translate(0.5, 0.5, 0);
+                poseStack.scale(1.0f, 1.0f, 1.0f);
                 break;
             case GROUND:
                 poseStack.translate(0.5, 0, 0.5);
+                poseStack.scale(0.5f, 0.5f, 0.5f);
+                break;
+            case FIXED:
+                poseStack.scale(1.0f, 1.0f, 1.0f);
                 break;
             case THIRD_PERSON_RIGHT_HAND:
             case THIRD_PERSON_LEFT_HAND:
                 poseStack.translate(0.5, 0.5, 0.5);
+                poseStack.scale(0.6f, 0.6f, 0.6f);
                 break;
             case FIRST_PERSON_RIGHT_HAND:
             case FIRST_PERSON_LEFT_HAND:
                 poseStack.translate(0.5, 0.5, 0.5);
+                poseStack.scale(0.5f, 0.5f, 0.5f);
                 break;
             default:
                 break;
