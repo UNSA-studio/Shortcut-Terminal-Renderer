@@ -21,6 +21,7 @@ import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.client.model.IDynamicBakedModel;
 import net.neoforged.neoforge.client.model.data.ModelData;
+import net.neoforged.neoforge.client.model.pipeline.QuadBakingVertexConsumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
@@ -47,7 +48,8 @@ public class GLTFModelLoader {
             Resource res = manager.getResource(loc).orElseThrow(() -> new RuntimeException("Not found: " + modelPath));
             try (InputStream is = res.open()) {
                 GltfModelReader reader = new GltfModelReader();
-                GltfModel model = reader.readWithoutReferences(is);
+                // 核心：借鉴MCglTF，通过getModel()获取真正的模型接口
+                GltfModel model = reader.readWithoutReferences(is).getModel();
                 BakedModel bakedModel = new GlTFBakedModel(model, loc);
                 MODEL_CACHE.put(modelPath, bakedModel);
                 LOGGER.debug("Loaded GLTF as BakedModel: {}", modelPath);
@@ -71,9 +73,11 @@ public class GLTFModelLoader {
         public GlTFBakedModel(GltfModel model, ResourceLocation modelLocation) {
             this.modelLocation = modelLocation;
             LOGGER.debug("Building BakedModel for: {}", modelLocation);
-            for (MeshModel mesh : model.getMeshModels()) {
-                for (MeshPrimitiveModel primitive : mesh.getMeshPrimitiveModels()) {
-                    if (primitive.getMode() != MeshPrimitiveModel.Mode.TRIANGLES) {
+            // 遍历所有网格
+            for (MeshModel mesh : model.getMeshes()) {
+                for (MeshPrimitiveModel primitive : mesh.getMeshPrimitives()) {
+                    // 三角形模式的值是 4
+                    if (primitive.getMode() != 4) {
                         LOGGER.warn("Skipping primitive with non-TRIANGLES mode: {}", primitive.getMode());
                         continue;
                     }
@@ -92,25 +96,21 @@ public class GLTFModelLoader {
             AccessorModel uvAccessor = attributes.get("TEXCOORD_0");
             if (posAccessor == null) return Collections.emptyList();
 
-            FloatBuffer positions = posAccessor.getBufferFloat();
-            FloatBuffer normals = normalAccessor != null ? normalAccessor.getBufferFloat() : null;
-            FloatBuffer texCoords = uvAccessor != null ? uvAccessor.getBufferFloat() : null;
+            // 获取数据缓冲区
+            FloatBuffer positions = posAccessor.getBuffer().asFloatBuffer();
+            FloatBuffer normals = normalAccessor != null ? normalAccessor.getBuffer().asFloatBuffer() : null;
+            FloatBuffer texCoords = uvAccessor != null ? uvAccessor.getBuffer().asFloatBuffer() : null;
 
             AccessorModel indicesAccessor = primitive.getIndices();
             int vertexCount = indicesAccessor != null ? indicesAccessor.getCount() : posAccessor.getCount();
-            ByteBuffer indexBuffer = indicesAccessor != null ? indicesAccessor.getBufferByte() : null;
+            ByteBuffer indexBuffer = indicesAccessor != null ? indicesAccessor.getBuffer() : null;
             int indexComponentType = indicesAccessor != null ? indicesAccessor.getComponentType() : 0;
 
-            // 使用默认纹理（后续可在此处根据材质信息替换真实纹理）
+            // 使用默认纹理
             TextureAtlasSprite sprite = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
                     .apply(MissingTextureAtlasSprite.getLocation());
 
             List<BakedQuad> quadList = new ArrayList<>();
-            
-            // 计算模型包围盒，用于调试
-            Vector3f min = new Vector3f(Float.MAX_VALUE);
-            Vector3f max = new Vector3f(-Float.MAX_VALUE);
-            
             for (int i = 0; i < vertexCount; i += 3) {
                 int[] indices = new int[3];
                 if (indexBuffer != null) {
@@ -120,30 +120,29 @@ public class GLTFModelLoader {
                 } else {
                     indices[0] = i; indices[1] = i + 1; indices[2] = i + 2;
                 }
-                // 收集顶点数据并构建BakedQuad
-                int[] packedData = new int[DefaultVertexFormat.BLOCK.getIntegerSize() * 3];
+                
+                // 使用QuadBakingVertexConsumer简化顶点数据组装
+                QuadBakingVertexConsumer baker = new QuadBakingVertexConsumer(q -> quadList.add(q));
+                baker.setSprite(sprite);
+                baker.setDirection(Direction.NORTH);
+                
                 for (int j = 0; j < 3; j++) {
                     int idx = indices[j];
                     Vector3f pos = new Vector3f(positions.get(idx * 3), positions.get(idx * 3 + 1), positions.get(idx * 3 + 2));
-                    min.min(pos);
-                    max.max(pos);
                     Vector3f normal = normals != null ? new Vector3f(normals.get(idx * 3), normals.get(idx * 3 + 1), normals.get(idx * 3 + 2)) : new Vector3f(0, 1, 0);
                     float u = texCoords != null ? texCoords.get(idx * 2) : 0;
                     float v = texCoords != null ? texCoords.get(idx * 2 + 1) : 0;
-                    putVertexData(packedData, j, pos, normal, u, v, sprite);
+                    
+                    baker.vertex(pos.x, pos.y, pos.z)
+                         .color(255, 255, 255, 255)
+                         .uv(sprite.getU(u), sprite.getV(v))
+                         .uv2(0xF000F0) // 默认光照值
+                         .normal(normal.x, normal.y, normal.z)
+                         .endVertex();
                 }
-                // 创建 BakedQuad，面方向默认为北（对于物品模型方向不重要）
-                BakedQuad quad = new BakedQuad(packedData, -1, Direction.NORTH, sprite, true);
-                quadList.add(quad);
+                // 生成四边形
+                // QuadBakingVertexConsumer会自动处理
             }
-            
-            // 输出模型尺寸信息，便于调试
-            LOGGER.debug("Primitive bounds: min={}, max={}", min, max);
-            float sizeX = max.x - min.x;
-            float sizeY = max.y - min.y;
-            float sizeZ = max.z - min.z;
-            LOGGER.debug("Primitive size: X={}, Y={}, Z={}", sizeX, sizeY, sizeZ);
-            
             return quadList;
         }
 
@@ -156,23 +155,6 @@ public class GLTFModelLoader {
             }
         }
 
-        private void putVertexData(int[] packedData, int vertexIdx, Vector3f pos, Vector3f normal, float u, float v, TextureAtlasSprite sprite) {
-            int offset = vertexIdx * DefaultVertexFormat.BLOCK.getIntegerSize();
-            // 填充顶点数据 (位置, 颜色, UV, 光照, 法线等)
-            packedData[offset] = Float.floatToRawIntBits(pos.x);
-            packedData[offset + 1] = Float.floatToRawIntBits(pos.y);
-            packedData[offset + 2] = Float.floatToRawIntBits(pos.z);
-            packedData[offset + 3] = -1;
-            packedData[offset + 4] = Float.floatToRawIntBits(sprite.getU(u));
-            packedData[offset + 5] = Float.floatToRawIntBits(sprite.getV(v));
-            // 光照信息简化处理
-            packedData[offset + 6] = 0;
-            packedData[offset + 7] = Float.floatToRawIntBits(normal.x);
-            packedData[offset + 8] = Float.floatToRawIntBits(normal.y);
-            packedData[offset + 9] = Float.floatToRawIntBits(normal.z);
-        }
-
-        // ----- 实现 IDynamicBakedModel 必要方法 -----
         @Override
         public @NotNull List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, @NotNull RandomSource rand, @NotNull ModelData data, @Nullable RenderType renderType) {
             return quads;
