@@ -10,8 +10,8 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 import unsa.str.com.strenderer.api.STRendererAPI;
-import unsa.str.com.strenderer.client.GLTFModelLoader;
 import unsa.str.com.strenderer.client.OBJModelLoader;
+import unsa.str.com.strenderer.client.gltf.GltfModelLoader;
 
 public class CustomItemRenderer {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -30,7 +30,6 @@ public class CustomItemRenderer {
             // 根据模型类型决定缩放比例
             float scale = 1.0f;
             if (data.getType() == STRendererAPI.ModelType.GLTF) {
-                // glTF模型通常需要缩小（如果太大）或放大（如果太小）
                 scale = 0.5f; // 可根据实际模型大小调整
             } else if (data.getType() == STRendererAPI.ModelType.OBJ) {
                 scale = 0.5f;
@@ -39,7 +38,7 @@ public class CustomItemRenderer {
             
             BakedModel model = null;
             if (data.getType() == STRendererAPI.ModelType.GLTF) {
-                model = GLTFModelLoader.loadModel(data.getModelPath());
+                model = GltfModelLoader.loadModel(data.getModelPath());
                 if (model != null) {
                     LOGGER.debug("GLTF model loaded successfully: {}", data.getModelPath());
                 } else {
